@@ -1,38 +1,129 @@
-<script setup lang="ts">
-// chrome.identity.launchWebAuthFlow(
-//   {
-//     interactive: true,
-//     url:
-//       `https://github.com/login/oauth/authorize` +
-//       `?client_id=55e294602d71eb006dc505540cf0614d6b3c7f35` +
-//       `&redirect_uri=https://ekgmcbpgglflmgcfajnglpbcbdccnnje.chromiumapp.org/github_cb` +
-//       `&scope=user.email`,
-//   },
-//   (a) => {
-//     console.log(a)
-//   }
-// )
-</script>
-
 <template>
-  <div class="text-center m-4">
-    <h1 class="text-3xl font-bold underline pb-6">Hello world from Popup!</h1>
+  <div class="space-y-6">
+    <section class="space-y-4">
+      <div>
+        <label class="block font-semibold">Title</label>
 
-    <RouterLink to="/about">About</RouterLink>
+        <input
+          type="text"
+          :value="title"
+          :disabled="true"
+        />
+      </div>
+
+      <div>
+        <label class="block font-semibold">Description</label>
+
+        <textarea
+          :value="description"
+          :disabled="true"
+        />
+      </div>
+    </section>
+
+    <section
+      v-for="item in meta"
+      :key="item.section"
+    >
+      <h2 class="text-xl font-semibold capitalize">{{ item.section }}</h2>
+
+      <ul class="list-inside list-disc space-y-4">
+        <li
+          v-for="el in item.elements"
+          :key="el.name"
+        >
+          <span class="capitalize">{{ el.name.toLowerCase() }}</span>
+
+          <ul class="list-inside list-disc space-y-2 pl-4">
+            <li
+              v-for="attr in el.attributes"
+              :key="attr.name"
+            >
+              {{ attr.name }} - {{ attr.value }}
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </section>
   </div>
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+<script setup lang="ts">
+const description = ref(null)
+const rawMeta = ref([])
+const title = ref(null)
+const tab = ref(null)
+
+const meta = computed(() => {
+  return Object.entries(rawMeta.value).map(([section, elements]) => {
+    return {
+      section,
+      elements: elements.map((stringElement) => {
+        const container = document.createElement('template')
+
+        container.innerHTML = stringElement.trim()
+
+        const el = container.content.firstChild
+        const attributes = []
+
+        for (let i = 0; i < el.attributes.length; i++) {
+          const { name, value } = el.attributes.item(i)
+
+          attributes.push({ name, value })
+        }
+
+        return { name: el.tagName, attributes }
+      }),
+    }
+  })
+})
+
+onMounted(() => {
+  getActiveTab()
+})
+
+function getActiveTab() {
+  chrome.tabs
+    .query({ active: true, currentWindow: true })
+    .then(function (tabs) {
+      var activeTab = tabs[0]
+
+      tab.value = activeTab
+
+      return chrome.scripting.executeScript({
+        target: { tabId: activeTab.id },
+        func: getDOM,
+      })
+    })
+    .then((results) => {
+      // Awkward syntax as executeScript.func can only return string or arrays
+      const dom = results[0].result[0]
+
+      title.value = dom.title
+      description.value = dom.description
+      rawMeta.value = dom.tags
+    })
+    .catch((error) => console.error(error))
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+
+function getDOM() {
+  function getHTML(selector: string, target = 'outerHTML') {
+    return Array.from(document.querySelectorAll(selector)).map((element) => {
+      return element[target]
+    })
+  }
+
+  return [
+    {
+      title: getHTML('title', 'innerHTML')[0],
+      description: getHTML('meta[name="description"]', 'content')[0],
+      tags: {
+        links: getHTML('head link'),
+        meta: getHTML('head meta'),
+      },
+    },
+  ]
 }
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-</style>
+</script>
+
+<style scoped></style>
