@@ -3,10 +3,9 @@
 @tailwind utilities;
 
 body {
-  @apply bg-[#F7F4F3]
+  @apply bg-[#F7F4F3] text-[16px];
 }
 
 h1, h2, h3, h4, h5, h6 {
-  @apply font-semibold text-[#F24333]
-
+  @apply font-semibold font-heading text-[#F24333];
 }

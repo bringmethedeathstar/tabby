@@ -5,7 +5,7 @@
   >
     <img class="w-20 h-auto mr-6" :src="brand" />
 
-    <h1 class="text-xl font-semibold w-full py-2">Tabby SEO Tools</h1>
+    <h1 class="text-2xl font-semibold w-full py-2">Tabby SEO Tools</h1>
   </header>
 
   <main class="p-4">
